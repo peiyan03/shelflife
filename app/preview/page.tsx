@@ -26,7 +26,10 @@ export default function Preview() {
       <div>
         <p className="eyebrow">FIXTURE PREVIEW</p>
         <h1 className="page-title">Components</h1>
-        <p className="page-intro">The nine components of the contract, each rendered once with fixture data. The sample button opens the confirm sheet.</p>
+        <p className="page-intro">The nine components of the contract, each rendered once with fixture data.</p>
+        <p className="notice" role="note">
+          This is a design preview with made-up items. It is not your fridge, and nothing you do here is saved. Your fridge is on Home.
+        </p>
       </div>
 
       <section>
