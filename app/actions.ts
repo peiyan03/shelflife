@@ -7,7 +7,15 @@ import { CATEGORIES } from '@/components/contract'
 import { db, schema } from '@/lib/db'
 import { todayISO } from '@/lib/expiry'
 import { getOrCreateHousehold } from '@/lib/household'
-
+import { readFile } from 'node:fs/promises'
+import path from 'node:path'
+import type { ExtractedLine } from '@/components/contract'
+import { IMAGE_TYPES, extractReceipt, type ImageMediaType } from '@/lib/ai'
+import { NoReceiptError, confirmedLinesSchema } from '@/lib/extract'
+import { addDays } from '@/lib/expiry'
+import { suggestDishes } from '@/lib/ai'
+import { listItems } from '@/lib/items'
+import { suggestionsKey } from '@/lib/suggestions'
 export type ActionResult = { ok: true } | { ok: false; error: string }
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD')
@@ -88,16 +96,9 @@ export async function updateExpiry(id: string, expiresOn: string): Promise<Actio
 
 // ---- Receipts ----------------------------------------------------------------
 
-import { readFile } from 'node:fs/promises'
-import path from 'node:path'
-import type { ExtractedLine } from '@/components/contract'
-import { IMAGE_TYPES, extractReceipt, type ImageMediaType } from '@/lib/ai'
-import { NoReceiptError, confirmedLinesSchema } from '@/lib/extract'
-import { addDays } from '@/lib/expiry'
-
 export type ExtractResult = { ok: true; lines: ExtractedLine[] } | { ok: false; error: string }
 
-export const MAX_TEXT = 8000
+const MAX_TEXT = 8000
 
 async function runExtract(input: Parameters<typeof extractReceipt>[0]): Promise<ExtractResult> {
   try {
@@ -205,10 +206,6 @@ export async function saveReceipt(input: SaveInput): Promise<ActionResult & { sa
 }
 
 // ---- Dishes -----------------------------------------------------------------
-
-import { suggestDishes } from '@/lib/ai'
-import { listItems } from '@/lib/items'
-import { suggestionsKey } from '@/lib/suggestions'
 
 /** On demand: three dishes from the in-stock items, cached on the household against a key of those items. */
 export async function refreshDishes(): Promise<ActionResult> {
