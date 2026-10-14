@@ -17,48 +17,43 @@ import {
 
 const noop = () => {}
 
-// Every contract component with the fixtures. Codex's playground; it ships.
+// Each contract component once, with the fixtures.
 export default function Preview() {
   const [lines, setLines] = useState<ExtractedLine[]>(fixtureLines)
   const [open, setOpen] = useState(false)
   return (
-    <main className="preview-lab flex flex-col gap-8 p-4">
-      <h1 className="text-xl font-semibold">Shelf Life</h1>
-      <p className="eyebrow">FIXTURE PREVIEW · ALL STATES BELOW</p>
-      <InputStrip onText={noop} onImage={noop} onSample={() => setOpen(true)} busy={false} />
-      <div className="preview-layout">
-        <Fridge items={fixtureItems} onUsed={noop} onBinned={noop} onExpiry={noop} />
-        <DishesPanel dishes={fixtureDishes} stale={false} onRefresh={noop} busy={false} items={fixtureItems} />
+    <main className="preview-lab flex flex-col gap-8">
+      <div>
+        <p className="eyebrow">FIXTURE PREVIEW</p>
+        <h1 className="page-title">Components</h1>
+        <p className="page-intro">The nine components of the contract, each rendered once with fixture data. The sample button opens the confirm sheet.</p>
       </div>
 
       <section>
         <h2>InputStrip</h2>
-        <InputStrip onText={noop} onImage={noop} onSample={noop} busy={false} />
-        <InputStrip onText={noop} onImage={noop} onSample={noop} busy={true} />
-        <InputStrip onText={noop} onImage={noop} onSample={noop} busy={false} error="Could not read a receipt in that photo." />
+        <InputStrip onText={noop} onImage={noop} onSample={() => setOpen(true)} busy={false} />
       </section>
 
       <section>
         <h2>ExpiryBadge</h2>
-        <ExpiryBadge daysLeft={12} freshness="fresh" />
-        <ExpiryBadge daysLeft={3} freshness="soon" />
-        <ExpiryBadge daysLeft={0} freshness="soon" />
-        <ExpiryBadge daysLeft={-1} freshness="expired" />
+        <div className="preview-badges">
+          <ExpiryBadge daysLeft={12} freshness="fresh" />
+          <ExpiryBadge daysLeft={3} freshness="soon" />
+          <ExpiryBadge daysLeft={0} freshness="soon" />
+          <ExpiryBadge daysLeft={-1} freshness="expired" />
+        </div>
       </section>
 
       <section>
         <h2>ItemTile</h2>
         <ul className="tile-grid preview-tiles">
-          {fixtureItems.slice(0, 3).map((item) => (
-            <ItemTile key={item.id} item={item} onUsed={noop} onBinned={noop} onExpiry={noop} />
-          ))}
+          <ItemTile item={fixtureItems[2]} onUsed={noop} onBinned={noop} onExpiry={noop} />
         </ul>
       </section>
 
       <section>
         <h2>FridgeZone</h2>
         <FridgeZone zone="top" items={fixtureItems.filter((i) => i.category === 'dairy')} onUsed={noop} onBinned={noop} />
-        <FridgeZone zone="door" items={[]} onUsed={noop} onBinned={noop} />
       </section>
 
       <section>
@@ -68,7 +63,9 @@ export default function Preview() {
 
       <section>
         <h2>ConfirmSheet</h2>
-        {!open ? <button onClick={() => setOpen(true)}>Reopen</button> : null}
+        <button type="button" onClick={() => setOpen(true)}>
+          Open the confirm sheet
+        </button>
         <ConfirmSheet lines={lines} open={open} onChange={setLines} onSave={() => setOpen(false)} onCancel={() => setOpen(false)} busy={false} />
       </section>
 
@@ -80,14 +77,11 @@ export default function Preview() {
       <section>
         <h2>DishesPanel</h2>
         <DishesPanel dishes={fixtureDishes} stale={false} onRefresh={noop} busy={false} items={fixtureItems} />
-        <DishesPanel dishes={fixtureDishes} stale={true} onRefresh={noop} busy={false} items={fixtureItems} />
-        <DishesPanel dishes={null} stale={false} onRefresh={noop} busy={true} items={fixtureItems} />
-        <DishesPanel dishes={null} stale={false} onRefresh={noop} busy={false} items={[]} />
       </section>
 
       <section>
         <h2>EmptyState</h2>
-        <EmptyState onSample={noop} />
+        <EmptyState onSample={() => setOpen(true)} />
       </section>
     </main>
   )

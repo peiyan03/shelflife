@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from 'next'
+import Link from 'next/link'
+import { Nav } from '@/app/nav'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -14,7 +16,15 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <header className="site-header">
+          <Link href="/" className="site-brand">
+            Shelf Life
+          </Link>
+          <Nav />
+        </header>
+        {children}
+      </body>
     </html>
   )
 }

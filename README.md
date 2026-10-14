@@ -21,6 +21,10 @@ No accounts: the first write creates a `household` row and sets an httpOnly cook
 
 If the Anthropic key has no credit, the app says so instead of failing quietly: paste and photo show a message, the sample button falls back to a stored pre-read of the same receipt and labels it, and the dishes button explains why it is off. `/api/health` reports whether the deployment can reach the database.
 
+## Pages
+
+The home page holds the three sections that matter: add your receipt, your fridge, what can I cook. The menu holds the rest: `/add` for adding an item by hand, `/preview` for every component rendered once with fixtures, `/about` for what this is and why.
+
 ## How it works
 
 1. **Add a receipt.** Drag or pick a photo, paste the text, or press the sample button. Photos are re-encoded to JPEG on the client (1600 px long edge, quality 0.8) so an iPhone HEIC works and the upload stays under 5 MB.

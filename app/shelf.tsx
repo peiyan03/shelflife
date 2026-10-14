@@ -12,9 +12,8 @@ import {
   updateExpiry,
   type ExtractResult,
 } from '@/app/actions'
-import { ManualAdd } from '@/app/manual-add'
 import type { Dish, ExtractedLine, FridgeItem } from '@/components/contract'
-import { ConfirmSheet, DishesPanel, EmptyState, Fridge, InputStrip } from '@/components/fridge'
+import { ConfirmSheet, DishesPanel, Fridge, InputStrip } from '@/components/fridge'
 import { reencodeToJpeg } from '@/lib/reencode'
 
 interface ShelfProps {
@@ -31,7 +30,8 @@ interface Pending {
   lines: ExtractedLine[]
 }
 
-// The one screen. Holds client state (confirm sheet, busy, errors); the server page feeds it data.
+// The one screen: add your receipt, your fridge, what can I cook.
+// Holds client state (confirm sheet, busy, errors); the server page feeds it data.
 export function Shelf({ items, dishes, stale }: ShelfProps) {
   const [pending, setPending] = useState<Pending | null>(null)
   const [reading, setReading] = useState(false)
@@ -104,15 +104,15 @@ export function Shelf({ items, dishes, stale }: ShelfProps) {
   }
 
   return (
-    <main className="flex flex-col gap-4 p-4">
-      <h1 className="text-2xl font-semibold">Shelf Life</h1>
-      <InputStrip onText={onText} onImage={onImage} onSample={onSample} busy={reading} error={error} />
-      {retry && !reading ? (
-        <button type="button" onClick={retry} className="self-start text-sm underline">
-          Try again
-        </button>
-      ) : null}
-      <ManualAdd />
+    <main className="flex flex-col gap-6">
+      <div className="receipt-section">
+        <InputStrip onText={onText} onImage={onImage} onSample={onSample} busy={reading} error={error} />
+        {retry && !reading ? (
+          <button type="button" onClick={retry} className="retry-button">
+            Try again
+          </button>
+        ) : null}
+      </div>
       <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
         <section className="flex flex-col gap-4">
           <ConfirmSheet
@@ -123,7 +123,6 @@ export function Shelf({ items, dishes, stale }: ShelfProps) {
             onCancel={() => setPending(null)}
             busy={saving}
           />
-          {items.length === 0 && !pending ? <EmptyState onSample={onSample} /> : null}
           <Fridge
             items={items}
             onUsed={(id) => run(() => markUsed(id))}
