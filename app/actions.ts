@@ -85,3 +85,121 @@ export async function updateExpiry(id: string, expiresOn: string): Promise<Actio
     return { ok: false, error: 'Could not change the date. Try again.' }
   }
 }
+
+// ---- Receipts ----------------------------------------------------------------
+
+import { readFile } from 'node:fs/promises'
+import path from 'node:path'
+import type { ExtractedLine } from '@/components/contract'
+import { IMAGE_TYPES, extractReceipt, type ImageMediaType } from '@/lib/ai'
+import { NoReceiptError, confirmedLinesSchema } from '@/lib/extract'
+import { addDays } from '@/lib/expiry'
+
+export type ExtractResult = { ok: true; lines: ExtractedLine[] } | { ok: false; error: string }
+
+export const MAX_TEXT = 8000
+
+async function runExtract(input: Parameters<typeof extractReceipt>[0]): Promise<ExtractResult> {
+  try {
+    const lines = await extractReceipt(input)
+    return { ok: true, lines }
+  } catch (e) {
+    if (e instanceof NoReceiptError) {
+      return { ok: false, error: 'Could not read a receipt there. Try a clearer photo, or paste the text.' }
+    }
+    console.error('extract', e)
+    return { ok: false, error: 'The receipt reader did not answer. Your input is still here; try again.' }
+  }
+}
+
+export async function extractFromText(text: string): Promise<ExtractResult> {
+  const trimmed = (text ?? '').trim()
+  if (!trimmed) return { ok: false, error: 'Paste some receipt text first.' }
+  if (trimmed.length > MAX_TEXT) {
+    return { ok: false, error: `That is over ${MAX_TEXT.toLocaleString()} characters. Trim it down.` }
+  }
+  return runExtract({ text: trimmed })
+}
+
+export async function extractFromImage(formData: FormData): Promise<ExtractResult> {
+  const file = formData.get('image')
+  if (!(file instanceof File)) return { ok: false, error: 'Pick a photo first.' }
+  if (file.size > 5 * 1024 * 1024) return { ok: false, error: 'That image is over 5 MB. Try a smaller photo.' }
+  if (!IMAGE_TYPES.includes(file.type as ImageMediaType)) {
+    return { ok: false, error: 'Use a JPEG, PNG, WebP or GIF photo.' }
+  }
+  const data = Buffer.from(await file.arrayBuffer()).toString('base64')
+  return runExtract({ image: { data, mediaType: file.type as ImageMediaType } })
+}
+
+/** The "Try a sample receipt" button: the real flow over samples/receipt-1.jpg. */
+export async function extractSample(): Promise<ExtractResult> {
+  try {
+    const buf = await readFile(path.join(process.cwd(), 'samples', 'receipt-1.jpg'))
+    return runExtract({ image: { data: buf.toString('base64'), mediaType: 'image/jpeg' } })
+  } catch (e) {
+    console.error('sample', e)
+    return { ok: false, error: 'The sample receipt is missing from this deployment.' }
+  }
+}
+
+const saveSchema = z.object({
+  source: z.enum(['image', 'text', 'sample']),
+  clientKey: z.string().uuid(),
+  lines: confirmedLinesSchema,
+})
+export type SaveInput = z.infer<typeof saveSchema>
+
+/**
+ * The only write from a receipt. Idempotent per clientKey: a second save of the same
+ * extraction inserts nothing. Unticked lines are kept in `extracted` but not as items.
+ */
+export async function saveReceipt(input: SaveInput): Promise<ActionResult & { saved?: number }> {
+  const parsed = saveSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: 'Check the items: every kept line needs a name and a quantity.' }
+  const { source, clientKey, lines } = parsed.data
+  const keep = lines.filter((l) => l.isFood)
+  if (keep.length === 0) return { ok: false, error: 'Tick at least one item to save.' }
+  try {
+    const household = await getOrCreateHousehold()
+    const existing = await db()
+      .select({ id: schema.receipts.id })
+      .from(schema.receipts)
+      .where(eq(schema.receipts.clientKey, clientKey))
+      .limit(1)
+    if (existing.length) {
+      revalidatePath('/')
+      return { ok: true, saved: 0 }
+    }
+    const receiptId = crypto.randomUUID()
+    const today = todayISO()
+    await db().batch([
+      db().insert(schema.receipts).values({
+        id: receiptId,
+        householdId: household.id,
+        source,
+        extracted: lines,
+        clientKey,
+      }),
+      db()
+        .insert(schema.items)
+        .values(
+          keep.map((l) => ({
+            householdId: household.id,
+            receiptId,
+            name: l.name,
+            qty: l.qty,
+            unit: l.unit || null,
+            category: l.category,
+            boughtOn: today,
+            expiresOn: addDays(today, l.shelfLifeDays),
+          })),
+        ),
+    ])
+    revalidatePath('/')
+    return { ok: true, saved: keep.length }
+  } catch (e) {
+    console.error('saveReceipt', e)
+    return { ok: false, error: 'Could not save those items. Try again.' }
+  }
+}
