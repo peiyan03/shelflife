@@ -81,6 +81,8 @@ export interface ConfirmSheetProps {
   onSave: () => void
   onCancel: () => void
   busy: boolean
+  /** optional: a message shown inside the sheet (placeholder mode, a failed save) */
+  notice?: string
 }
 
 export interface DishesPanelProps {

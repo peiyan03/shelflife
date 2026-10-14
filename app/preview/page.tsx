@@ -69,7 +69,7 @@ export default function Preview() {
         <button type="button" onClick={() => setOpen(true)}>
           Open the confirm sheet
         </button>
-        <ConfirmSheet lines={lines} open={open} onChange={setLines} onSave={() => setOpen(false)} onCancel={() => setOpen(false)} busy={false} />
+        <ConfirmSheet lines={lines} open={open} onChange={setLines} onSave={() => setOpen(false)} onCancel={() => setOpen(false)} busy={false} notice="Preview: these lines come from fixtures and Save closes the sheet." />
       </section>
 
       <section>

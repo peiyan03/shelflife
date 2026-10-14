@@ -28,6 +28,7 @@ interface Pending {
   source: Source
   clientKey: string
   lines: ExtractedLine[]
+  notice?: string
 }
 
 // The one screen: add your receipt, your fridge, what can I cook.
@@ -56,8 +57,7 @@ export function Shelf({ items, dishes, stale }: ShelfProps) {
     call()
       .then((r) => {
         if (r.ok) {
-          setPending({ source, clientKey: crypto.randomUUID(), lines: r.lines })
-          if (r.notice) setError(r.notice)
+          setPending({ source, clientKey: crypto.randomUUID(), lines: r.lines, notice: r.notice })
         } else {
           setError(r.error)
           setRetry(() => () => extract(source, call))
@@ -97,9 +97,9 @@ export function Shelf({ items, dishes, stale }: ShelfProps) {
         if (r.ok) {
           setPending(null)
           setError(undefined)
-        } else setError(r.error)
+        } else setPending((p) => (p ? { ...p, notice: r.error } : p))
       })
-      .catch(() => setError('Could not save those items. Try again.'))
+      .catch(() => setPending((p) => (p ? { ...p, notice: 'Could not save those items. Try again.' } : p)))
       .finally(() => setSaving(false))
   }
 
@@ -122,6 +122,7 @@ export function Shelf({ items, dishes, stale }: ShelfProps) {
             onSave={onSave}
             onCancel={() => setPending(null)}
             busy={saving}
+            notice={pending?.notice}
           />
           <Fridge
             items={items}

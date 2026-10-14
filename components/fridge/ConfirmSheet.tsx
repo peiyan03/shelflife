@@ -5,7 +5,7 @@ import type { ConfirmSheetProps, ExtractedLine } from '@/components/contract'
 import { CATEGORIES } from '@/components/contract'
 import { addDays, daysLeft, todayISO } from '@/lib/expiry'
 
-export function ConfirmSheet({ lines, open, onChange, onSave, onCancel, busy }: ConfirmSheetProps) {
+export function ConfirmSheet({ lines, open, onChange, onSave, onCancel, busy, notice }: ConfirmSheetProps) {
   const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => {
     const dialog = ref.current
@@ -17,7 +17,7 @@ export function ConfirmSheet({ lines, open, onChange, onSave, onCancel, busy }: 
   const update = (i: number, patch: Partial<ExtractedLine>) => onChange(lines.map((l, j) => j === i ? { ...l, ...patch } : l))
   const ticked = lines.filter((l) => l.isFood).length
   return <dialog ref={ref} className="confirm-sheet" aria-labelledby="confirm-title" aria-describedby="confirm-note" onCancel={(e) => { e.preventDefault(); if (!busy) onCancel() }}>
-    <header className="confirm-header"><p className="eyebrow">ONE QUICK CHECK</p><h2 id="confirm-title">What goes on your shelf?</h2><p id="confirm-note">Expiry dates are estimates. Edit anything, untick what is not food. Nothing is saved yet.</p></header>
+    <header className="confirm-header"><p className="eyebrow">ONE QUICK CHECK</p><h2 id="confirm-title">What goes on your shelf?</h2><p id="confirm-note">Expiry dates are estimates. Edit anything, untick what is not food. Nothing is saved yet.</p>{notice ? <p className="notice" role="status">{notice}</p> : null}</header>
     <ul className="confirm-lines">{lines.map((line, i) => <li key={i} data-kept={line.isFood} className="confirm-line">
       <label className="keep-check"><input type="checkbox" checked={line.isFood} disabled={busy} onChange={(e) => update(i, { isFood: e.target.checked })} aria-label={`Keep ${line.name}`} /><span>Keep</span></label>
       <label className="confirm-name">Item<input value={line.name} disabled={busy} onChange={(e) => update(i, { name: e.target.value })} /></label>
