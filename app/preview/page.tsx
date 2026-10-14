@@ -20,10 +20,16 @@ const noop = () => {}
 // Every contract component with the fixtures. Codex's playground; it ships.
 export default function Preview() {
   const [lines, setLines] = useState<ExtractedLine[]>(fixtureLines)
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
   return (
-    <main className="flex flex-col gap-8 p-4">
-      <h1 className="text-xl font-semibold">Component preview</h1>
+    <main className="preview-lab flex flex-col gap-8 p-4">
+      <h1 className="text-xl font-semibold">Shelf Life</h1>
+      <p className="eyebrow">FIXTURE PREVIEW · ALL STATES BELOW</p>
+      <InputStrip onText={noop} onImage={noop} onSample={() => setOpen(true)} busy={false} />
+      <div className="preview-layout">
+        <Fridge items={fixtureItems} onUsed={noop} onBinned={noop} onExpiry={noop} />
+        <DishesPanel dishes={fixtureDishes} stale={false} onRefresh={noop} busy={false} items={fixtureItems} />
+      </div>
 
       <section>
         <h2>InputStrip</h2>
@@ -42,7 +48,7 @@ export default function Preview() {
 
       <section>
         <h2>ItemTile</h2>
-        <ul className="flex flex-wrap gap-2">
+        <ul className="tile-grid preview-tiles">
           {fixtureItems.slice(0, 3).map((item) => (
             <ItemTile key={item.id} item={item} onUsed={noop} onBinned={noop} onExpiry={noop} />
           ))}

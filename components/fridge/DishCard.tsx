@@ -2,24 +2,11 @@ import type { DishCardProps } from '@/components/contract'
 
 export function DishCard({ dish, items }: DishCardProps) {
   const uses = dish.usesItemIds.map((id) => items.find((i) => i.id === id)).filter((i) => i !== undefined)
-  return (
-    <article className="border p-2">
-      <h3 className="font-medium">{dish.title}</h3>
-      <p className="text-sm">{dish.minutes} min</p>
-      <p className="text-sm">
-        Uses:{' '}
-        {uses.map((i) => (
-          <span key={i.id} data-freshness={i.freshness}>
-            {i.icon} {i.name}{' '}
-          </span>
-        ))}
-      </p>
-      {dish.missing.length ? <p className="text-sm">To buy: {dish.missing.join(', ')}</p> : null}
-      <ol className="list-decimal pl-5 text-sm">
-        {dish.steps.map((s, i) => (
-          <li key={i}>{s}</li>
-        ))}
-      </ol>
-    </article>
-  )
+  return <article className="dish-card">
+    <div className="dish-title"><h3>{dish.title}</h3><span className="dish-time">{dish.minutes} min</span></div>
+    <p className="eyebrow dish-label">FROM YOUR FRIDGE</p>
+    <ul className="ingredient-list">{uses.map((i) => <li key={i.id} data-freshness={i.freshness}><span aria-hidden="true">{i.icon}</span> {i.name}</li>)}</ul>
+    {dish.missing.length ? <p className="missing-note"><strong>Just add</strong> {dish.missing.join(', ')}</p> : <p className="missing-note">You have everything you need.</p>}
+    <details className="recipe-details"><summary>Let’s cook <span aria-hidden="true">＋</span></summary><ol>{dish.steps.map((s, i) => <li key={i}>{s}</li>)}</ol></details>
+  </article>
 }
