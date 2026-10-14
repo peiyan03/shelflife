@@ -8,6 +8,13 @@ export const MODEL = 'claude-sonnet-5-5'
 export type ImageMediaType = 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
 export const IMAGE_TYPES: ImageMediaType[] = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
+/** True when the API answered that this key cannot be used (no credit, bad key). */
+export function isUnavailable(e: unknown): boolean {
+  if (!(e instanceof Anthropic.APIError)) return false
+  if (e.status === 401 || e.status === 403) return true
+  return e.status === 400 && /credit|billing/i.test(e.message)
+}
+
 let cached: Anthropic | null = null
 function client(): Anthropic {
   // One retry, then a clear message to the user. Timeout in ms.

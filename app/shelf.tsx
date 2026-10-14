@@ -55,8 +55,10 @@ export function Shelf({ items, dishes, stale }: ShelfProps) {
     setRetry(null)
     call()
       .then((r) => {
-        if (r.ok) setPending({ source, clientKey: crypto.randomUUID(), lines: r.lines })
-        else {
+        if (r.ok) {
+          setPending({ source, clientKey: crypto.randomUUID(), lines: r.lines })
+          if (r.notice) setError(r.notice)
+        } else {
           setError(r.error)
           setRetry(() => () => extract(source, call))
         }

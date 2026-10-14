@@ -10,7 +10,8 @@ import { getOrCreateHousehold } from '@/lib/household'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { ExtractedLine } from '@/components/contract'
-import { IMAGE_TYPES, extractReceipt, type ImageMediaType } from '@/lib/ai'
+import { IMAGE_TYPES, extractReceipt, isUnavailable, type ImageMediaType } from '@/lib/ai'
+import { SAMPLE_LINES } from '@/lib/sample-lines'
 import { NoReceiptError, confirmedLinesSchema } from '@/lib/extract'
 import { addDays } from '@/lib/expiry'
 import { suggestDishes } from '@/lib/ai'
@@ -96,7 +97,11 @@ export async function updateExpiry(id: string, expiresOn: string): Promise<Actio
 
 // ---- Receipts ----------------------------------------------------------------
 
-export type ExtractResult = { ok: true; lines: ExtractedLine[] } | { ok: false; error: string }
+export type ExtractResult =
+  | { ok: true; lines: ExtractedLine[]; notice?: string }
+  | { ok: false; error: string }
+
+const UNAVAILABLE = 'The receipt reader is switched off on this deployment (no API credit).'
 
 const MAX_TEXT = 8000
 
@@ -108,6 +113,7 @@ async function runExtract(input: Parameters<typeof extractReceipt>[0]): Promise<
     if (e instanceof NoReceiptError) {
       return { ok: false, error: 'Could not read a receipt there. Try a clearer photo, or paste the text.' }
     }
+    if (isUnavailable(e)) return { ok: false, error: `${UNAVAILABLE} Try the sample receipt, or add items by hand.` }
     console.error('extract', e)
     return { ok: false, error: 'The receipt reader did not answer. Your input is still here; try again.' }
   }
@@ -137,10 +143,16 @@ export async function extractFromImage(formData: FormData): Promise<ExtractResul
 export async function extractSample(): Promise<ExtractResult> {
   try {
     const buf = await readFile(path.join(process.cwd(), 'samples', 'receipt-1.jpg'))
-    return runExtract({ image: { data: buf.toString('base64'), mediaType: 'image/jpeg' } })
+    const lines = await extractReceipt({ image: { data: buf.toString('base64'), mediaType: 'image/jpeg' } })
+    return { ok: true, lines }
   } catch (e) {
+    if (isUnavailable(e)) {
+      // Placeholder until the key has credit: a stored pre-read of the same receipt, labelled.
+      return { ok: true, lines: SAMPLE_LINES, notice: `${UNAVAILABLE} Showing a stored pre-read of the sample receipt instead.` }
+    }
+    if (e instanceof NoReceiptError) return { ok: false, error: 'Could not read the sample receipt. Try again.' }
     console.error('sample', e)
-    return { ok: false, error: 'The sample receipt is missing from this deployment.' }
+    return { ok: false, error: 'The sample receipt could not be read on this deployment.' }
   }
 }
 
@@ -221,6 +233,7 @@ export async function refreshDishes(): Promise<ActionResult> {
     revalidatePath('/')
     return { ok: true }
   } catch (e) {
+    if (isUnavailable(e)) return { ok: false, error: 'Dish suggestions are switched off on this deployment (no API credit).' }
     console.error('refreshDishes', e)
     return { ok: false, error: 'Could not get dishes just now. Try again.' }
   }

@@ -17,7 +17,9 @@ pnpm test                    # two vitest suites
 pnpm build
 ```
 
-No accounts: the first write creates a `household` row and sets an httpOnly cookie. Press **Try a sample receipt** on the home page to run the real flow over `samples/receipt-1.jpg`.
+No accounts: the first write creates a `household` row and sets an httpOnly cookie. Press **Try a sample receipt** on the home page to run the real flow over `samples/receipt-1.jpg` (view it at `/api/sample`).
+
+If the Anthropic key has no credit, the app says so instead of failing quietly: paste and photo show a message, the sample button falls back to a stored pre-read of the same receipt and labels it, and the dishes button explains why it is off. In development, `GET /api/selftest` walks every database action through the real runtime for your browser's household.
 
 ## How it works
 
