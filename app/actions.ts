@@ -203,3 +203,28 @@ export async function saveReceipt(input: SaveInput): Promise<ActionResult & { sa
     return { ok: false, error: 'Could not save those items. Try again.' }
   }
 }
+
+// ---- Dishes -----------------------------------------------------------------
+
+import { suggestDishes } from '@/lib/ai'
+import { listItems } from '@/lib/items'
+import { suggestionsKey } from '@/lib/suggestions'
+
+/** On demand: three dishes from the in-stock items, cached on the household against a key of those items. */
+export async function refreshDishes(): Promise<ActionResult> {
+  try {
+    const household = await getOrCreateHousehold()
+    const items = await listItems(household.id)
+    if (items.length === 0) return { ok: false, error: 'Add something to the fridge first.' }
+    const dishes = await suggestDishes(items)
+    await db()
+      .update(schema.households)
+      .set({ suggestions: dishes, suggestionsKey: suggestionsKey(items), suggestionsAt: new Date() })
+      .where(eq(schema.households.id, household.id))
+    revalidatePath('/')
+    return { ok: true }
+  } catch (e) {
+    console.error('refreshDishes', e)
+    return { ok: false, error: 'Could not get dishes just now. Try again.' }
+  }
+}

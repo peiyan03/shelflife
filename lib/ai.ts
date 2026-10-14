@@ -56,3 +56,46 @@ export async function extractReceipt(input: ExtractInput): Promise<ExtractedLine
   if (!parsed.success) throw new NoReceiptError()
   return normaliseLines(parsed.data)
 }
+
+// ---- Dishes -----------------------------------------------------------------
+
+import { z } from 'zod'
+import type { Dish, FridgeItem } from '@/components/contract'
+
+const dishSchema = z.object({
+  title: z.string().trim().min(1).max(80),
+  minutes: z.number().int().min(5).max(180),
+  usesItemIds: z.array(z.string()).min(1).max(12),
+  missing: z.array(z.string().trim().min(1).max(40)).max(2),
+  steps: z.array(z.string().trim().min(1).max(200)).min(3).max(5),
+})
+export const dishesSchema = z.object({ dishes: z.array(dishSchema).length(3) })
+
+const DISHES_SYSTEM = `You suggest home cooking from what is in someone's fridge. Return exactly three dishes.
+Rules:
+- Build each dish around the items expiring soonest; the list is sorted soonest first and days left are given.
+- usesItemIds must only contain ids from the list. Every dish should use at least two listed items.
+- missing lists at most two store-cupboard things to buy, by name ("garlic", "lemon"). Assume salt, pepper and oil are at home.
+- steps: three to five short imperative sentences.
+- minutes: realistic total time.
+- Dishes should be different from each other and be things a tired person would actually cook on a weeknight.`
+
+/** One call over the in-stock items. Ids the model invents are dropped. */
+export async function suggestDishes(items: FridgeItem[]): Promise<Dish[]> {
+  const sorted = [...items].sort((a, b) => a.daysLeft - b.daysLeft)
+  const listing = sorted
+    .map((i) => `- id=${i.id} | ${i.name} | ${i.qty}${i.unit ? ' x ' + i.unit : ''} | ${i.category} | ${i.daysLeft} days left`)
+    .join('\n')
+  const response = await client().messages.parse({
+    model: MODEL,
+    max_tokens: 8000,
+    system: DISHES_SYSTEM,
+    messages: [{ role: 'user', content: `In the fridge, soonest first:\n${listing}\n\nWhat should I cook?` }],
+    output_config: { format: zodOutputFormat(dishesSchema), effort: 'medium' },
+  })
+  if (response.stop_reason === 'refusal' || !response.parsed_output) throw new Error('No dishes returned')
+  const parsed = dishesSchema.safeParse(response.parsed_output)
+  if (!parsed.success) throw new Error('Dishes did not validate')
+  const known = new Set(items.map((i) => i.id))
+  return parsed.data.dishes.map((d) => ({ ...d, usesItemIds: d.usesItemIds.filter((id) => known.has(id)) }))
+}

@@ -7,6 +7,7 @@ import {
   extractSample,
   markBinned,
   markUsed,
+  refreshDishes,
   saveReceipt,
   updateExpiry,
   type ExtractResult,
@@ -35,6 +36,7 @@ export function Shelf({ items, dishes, stale }: ShelfProps) {
   const [pending, setPending] = useState<Pending | null>(null)
   const [reading, setReading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [cooking, setCooking] = useState(false)
   const [error, setError] = useState<string | undefined>()
   const [retry, setRetry] = useState<(() => void) | null>(null)
   const [, start] = useTransition()
@@ -127,7 +129,21 @@ export function Shelf({ items, dishes, stale }: ShelfProps) {
             onExpiry={(id, date) => run(() => updateExpiry(id, date))}
           />
         </section>
-        <DishesPanel dishes={dishes} stale={stale} onRefresh={() => {}} busy={false} items={items} />
+        <DishesPanel
+          dishes={dishes}
+          stale={stale}
+          busy={cooking}
+          items={items}
+          onRefresh={() => {
+            if (cooking) return
+            setCooking(true)
+            refreshDishes()
+              .then((r) => {
+                if (!r.ok) setError(r.error)
+              })
+              .finally(() => setCooking(false))
+          }}
+        />
       </div>
     </main>
   )
